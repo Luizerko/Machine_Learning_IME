@@ -1,0 +1,28 @@
+Regularização pode ser definida como um conjunto de técnicas das mais diversas
+utilizadas com o objetivo de melhor generalizar o aprendizado, evitando prin-
+cipalmente o fenômeno típico de overfitting. Quando utilizamos técnicas de
+regularização no nosso modelo, limitamos o espaço de hipóteses através de res-
+trições das mais diversas. Por conta dessa limitação, temos um espaço de busca
+menor e provavelmente um pouco mais longe do zero quase absoluto de erro nos
+exemplos de treino. Por mais que possa parecer contraintuitivo, essa distância
+do zero quase absoluto ajuda o modelo a não se manobrar demais para "fittar" es-
+pecificamente os exemplos de treino, o que tipicamente resulta num modelo com
+melhor capacidade de generalização e, portanto, menor erro no conjunto de tes-
+tes, aquele que mais nos interessa.
+
+Falando agora especificamente do weight-decay trazido pelo professor Mostafa, C
+trata-se de uma constante escolhida para limitar superiormente o valor da soma
+dos quadrados dos pesos do vetor de pesos W. Já lambda, trata-se de uma outra
+constante, relacionada com C, mas também com outros valores associados à modela-
+gem desejada. Lambda é utilizado porque, ao fazer essa mistura de C com outros
+valores, é possível achar uma solução analítica mais simples para o problema de
+otimização que se deseja resolver. Não precisamos mais minimizar E_in(W) consi-
+derando que soma(w_i^2) <= C. Podemos minimizar diretamente
+
+			E_in(W) + (lamda/N)*soma(w_i^2)
+
+Apesar da noção de weight-decay estar mais diretamente relacionada à constante
+C, portanto, o que se usa na prática para resolver o problema de otimização é o
+lambda. Por fim, apenas para trazer um pouco mais de intuição para o conceito
+de lambda, vale desatacar que a constante é inversamente proporcional a C, dessa
+forma, se C cresce, lambda diminui e se C descrece, lambda aumenta.
