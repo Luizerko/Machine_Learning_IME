@@ -102,28 +102,66 @@ plt.xlabel('Class')
 plt.ylabel('Frequency')
 plt.show()
 
+X_train_train, X_train_val, y_train_train, y_train_val = train_test_split(X_train, y_train,
+                                                                          test_size=0.15, random_state=10)
+
 #Logistic regression classifier
 start_time = time.time()
-for i in range(1, 2):
-    logistic_clf = LogisticRegression(random_state=10, max_iter=i*1000,
-                                      tol=0.0001, C=1.0).fit(X_train, y_train)
-    
-    #Train scores
-    predictions = logistic_clf.predict(X_train)
-    predictions_prob = logistic_clf.predict_proba(X_train)
-    
-    print("Accuracy on training set: {}".format(logistic_clf.score(X_train, y_train)))
-    
-    f1_score_train = f1_score(y_true=y_train, y_pred=predictions, labels=np.unique(y_train), average='macro')
-    print("F1 score in the training set: {}".format(f1_score_train))
-    
-    log_loss_train = log_loss(y_true=y_train, y_pred=predictions_prob, labels=np.unique(y_train))
-    print("Log loss in the training set: {}".format(log_loss_train))
-    
-    print("Confusion matrix:")
-    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    plot_confusion_matrix(logistic_clf, X_train, y_train, labels=np.unique(y_train), ax=ax)
-    plt.show()
+best_accuracy = 0
+best_f1 = 0
+best_log_loss = 100000
+opt_iter = -1
+opt_C = -1
+accuracy_hist = []
+f1_score_hist = []
+log_loss_hist = []
+for i in np.linspace(100, 500, 5):
+    for j in range(1, 6):
+        logistic_clf = LogisticRegression(random_state=10, max_iter=i,
+                                        tol=0.0001, C=j).fit(X_train_train, y_train_train)
+        
+        #Train scores
+        predictions = logistic_clf.predict(X_train_val)
+        predictions_prob = logistic_clf.predict_proba(X_train_val)
+
+        accuracy_val = logistic_clf.score(X_train_train, y_train_train)
+        f1_score_val = f1_score(y_true=y_train_val, y_pred=predictions, labels=np.unique(y_train_val), average='macro')
+        log_loss_val = log_loss(y_true=y_train_val, y_pred=predictions_prob, labels=np.unique(y_train_val))
+
+        accuracy_hist.append((i, j, accuracy_val))
+        f1_score_hist.append((i, j, f1_score_val))
+        log_loss_hist.append((i, j, log_loss_val))
+
+        if accuracy_val+0.001 > best_accuracy and f1_score_val+0.001 > best_f1 and log_loss_val-0.001 < best_log_loss:
+            best_accuracy = accuracy_val
+            best_f1 = f1_score_val
+            best_log_loss = log_loss_val
+            
+            opt_iter = i
+            opt_C = j
+
+print("Best parameters:")
+print("Number of iterations: {}".format(opt_iter))
+print("C value: {}".format(opt_C))
+print("Accuracy in the training set: {}".format(best_accuracy))
+print("F1 score in the training set: {}".format(best_f1))
+print("Log loss in the training set: {}".format(best_log_loss))
+
+print("Confusion matrix:")
+fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+plot_confusion_matrix(logistic_clf, X_train_val, y_train_val, labels=np.unique(y_train_val), ax=ax)
+plt.show()
+
+fig, ax = plt.subplot(1, 2, figsize=(10, 10))
+ax[0, 0].plot(accuracy_hist[:][0], accuracy_hist[:][2])
+ax[0, 0].axis('off')
+ax[0, 0].set_title("Accuracy x Number of iterations: ")
+
+ax[0, 1].plot(accuracy_hist[:][1], accuracy_hist[:][2])
+ax[0, 1].axis('off')
+ax[0, 1].set_title("Accuracy x C value: ")
+
+plt.show()
 
 time_logistic = (time.time() - start_time)
 print("Execution time: {}".format(time_logistic))
@@ -151,6 +189,29 @@ for i in range(1, 2):
 
 time_nn = (time.time() - start_time)
 print("Execution time: {}".format(time_nn))
+
+#SVM classifier
+start_time = time.time()
+for i in range(1, 2):
+    svm_clf = SVC(random_state=10, max_iter=i*(-1), tol=0.001,
+                  C=1, kernel='rbf', verbose=False,
+                  decision_function_shape='ovr').fit(X_train_train, y_train_train)
+
+    #Train scores
+    predictions = svm_clf.predict(X_train_train)
+
+    print("Accuracy on training set: {}".format(svm_clf.score(X_train_train, y_train_train)))
+    
+    f1_score_train = f1_score(y_true=y_train_train, y_pred=predictions, labels=np.unique(y_train_train), average = 'macro')
+    print("F1 score in the training set: {}".format(f1_score_train))
+
+    print("Confusion matrix:")
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    plot_confusion_matrix(svm_clf, X_train_train, y_train_train, labels=np.unique(y_train_train), ax=ax)
+    plt.show()
+
+time_svm = (time.time() - start_time)
+print("Execution time: {}".format(time_svm))
 
 #Tempo de execução modelos logistic_reg/neural_net/SVM no Google Colab:
 #Processador -> 39/98
