@@ -72,6 +72,7 @@ print("Maximum value in X_train:", np.amax(X_train))
 print("\nMinimum value in X_test:", np.amin(X_test))
 print("Maximum value in X_test:", np.amax(X_test))
 
+#Importing all libraries we are going to use
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import log_loss, f1_score, plot_confusion_matrix
@@ -82,7 +83,8 @@ import time
 
 #train and validation split 70/30
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                  test_size=0.3, random_state=10)
+                                                  test_size=0.3, random_state=10,
+                                                  stratify=True)
 
 unique, counts = np.unique(y_train, return_counts=True)
 uniquev, countsv = np.unique(y_val, return_counts=True)
@@ -124,7 +126,7 @@ cont_i = 0
 cont_j = 0
 for i in np.linspace(500, 700, 3):
     for j in range(1, 4):
-        logistic_clf = LogisticRegression(random_state=10, max_iter=i,
+        logistic_clf = LogisticRegression(random_state=10, max_iter=int(i),
                                         tol=0.0001, C=j).fit(X_train_train, y_train_train)
         
         predictions = logistic_clf.predict(X_train_val)
@@ -138,7 +140,7 @@ for i in np.linspace(500, 700, 3):
         f1_score_hist.append((i, j, f1_score_val))
         log_loss_hist.append((i, j, log_loss_val))
 
-        if accuracy_val+0.001 > best_accuracy and f1_score_val+0.001 > best_f1 and log_loss_val-0.001 < best_log_loss:
+        if accuracy_val > best_accuracy and f1_score_val > best_f1 and log_loss_val < best_log_loss:
             best_accuracy = accuracy_val
             best_f1 = f1_score_val
             best_log_loss = log_loss_val
@@ -166,7 +168,7 @@ fig, ax = plt.subplots(1, 1, figsize=(10, 10))
 plot_confusion_matrix(logistic_clf, X_train_val, y_train_val, labels=np.unique(y_train_val), ax=ax)
 plt.show()
 
-fig, ax = plt.subplots(1, 2, figsize=(12, 12))
+fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 ax[0].plot([x[0] for x in accuracy_hist[arg_C:arg_C+7:3]],
             [x[2] for x in accuracy_hist[arg_C:arg_C+7:3]])
 ax[0].axis('on')
@@ -177,10 +179,9 @@ ax[0].set_ylabel("Accuracy")
 ax[1].plot([x[1] for x in accuracy_hist[arg_iter*3:(arg_iter*3)+3]],
             [x[2] for x in accuracy_hist[arg_iter*3:(arg_iter*3)+3]])
 ax[1].axis('on')
-ax[1].set_title("Accuracy x C value (best number of iterations fixed):")
+ax[1].set_title("C value X Accuracy (best number of iterations fixed):")
 ax[1].set_xlabel("C value")
 ax[1].set_ylabel("Accuracy")
-
 plt.show()
 
 time_logistic = (time.time() - start_time)
@@ -194,17 +195,23 @@ neural_net_best_clf = None
 opt_iter = -1
 opt_batch = -1
 opt_lr = -1
+arg_iter = -1
+arg_batch = -1
+arg_lr = -1
 accuracy_hist = []
 f1_score_hist = []
 
 #Fitting the model while selecting hyperparameters
-for i in np.linspace(50, 60, 2):
+cont_i = 0
+cont_j = 0
+cont_z = 0
+for i in np.linspace(90, 100, 2):
     for j in np.linspace(64, 128, 2):
         for z in np.geomspace(1e-3, 1e-2, 2):
-            neural_net_clf = MLPClassifier(random_state=10, max_iter=i, tol=0.0001,
-                                        hidden_layer_sizes=(7, 256), learning_rate_init=z,
+            neural_net_clf = MLPClassifier(random_state=10, max_iter=int(i), tol=0.0001,
+                                        hidden_layer_sizes=(8, 256), learning_rate_init=z,
                                         learning_rate='invscaling', validation_fraction=0.1,
-                                        batch_size=j, verbose=True,
+                                        batch_size=int(j), verbose=True,
                                         early_stopping=True).fit(X_train_train, y_train_train)
 
             predictions = neural_net_clf.predict(X_train_val)
@@ -212,10 +219,10 @@ for i in np.linspace(50, 60, 2):
             accuracy_val = neural_net_clf.score(X_train_val, y_train_val)
             f1_score_val = f1_score(y_true=y_train_val, y_pred=predictions, labels=np.unique(y_train_val), average='macro')
 
-            accuracy_hist.append((i, j, accuracy_val))
-            f1_score_hist.append((i, j, f1_score_val))
+            accuracy_hist.append((i, j, z, accuracy_val))
+            f1_score_hist.append((i, j, z, f1_score_val))
 
-            if accuracy_val+0.001 > best_accuracy and f1_score_val+0.001 > best_f1:
+            if accuracy_val > best_accuracy and f1_score_val > best_f1:
                 best_accuracy = accuracy_val
                 best_f1 = f1_score_val
                 neural_net_best_clf = neural_net_clf
@@ -223,6 +230,16 @@ for i in np.linspace(50, 60, 2):
                 opt_iter = i
                 opt_batch = j
                 opt_lr = z
+
+                arg_iter = cont_i
+                arg_batch = cont_j
+                arg_lr = cont_z
+
+            cont_z += 1
+        cont_z = 0
+        cont_j += 1
+    cont_j = 0
+    cont_i += 1
 
 print("Best parameters:")
 print("Number of iterations: {}".format(opt_iter))
@@ -233,18 +250,30 @@ print("F1 score in the training set: {}".format(best_f1))
 
 print("Confusion matrix:")
 fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-plot_confusion_matrix(logistic_clf, X_train_val, y_train_val, labels=np.unique(y_train_val), ax=ax)
+plot_confusion_matrix(neural_net_clf, X_train_val, y_train_val, labels=np.unique(y_train_val), ax=ax)
 plt.show()
 
-fig, ax = plt.subplots(1, 2, figsize=(10, 10))
-ax[0].plot([x[0] for x in accuracy_hist], [x for x in range(len(accuracy_hist))])
-ax[0].axis('off')
-ax[0].set_title("Accuracy x Number of iterations: ")
+fig, ax = plt.subplots(1, 3, figsize=(24, 12))
+ax[0].plot([x[0] for x in accuracy_hist[arg_lr+(arg_batch*2):arg_lr+(arg_batch*2)+5:4]],
+            [x[3] for x in accuracy_hist[arg_lr+(arg_batch*2):arg_lr+(arg_batch*2)+5:4]])
+ax[0].axis('on')
+ax[0].set_title("Number of epochs x Accuracy (best batch size and learning rate fixed):")
+ax[0].set_xlabel("Number of epochs")
+ax[0].set_ylabel("Accuracy")
 
-ax[1].plot([x[1] for x in accuracy_hist], [x for x in range(len(accuracy_hist))])
-ax[1].axis('off')
-ax[1].set_title("Accuracy x C value: ")
+ax[1].plot([x[1] for x in accuracy_hist[arg_iter*4+arg_lr:arg_iter*4+arg_lr+3:2]],
+            [x[3] for x in accuracy_hist[arg_iter*4+arg_lr:arg_iter*4+arg_lr+3:2]])
+ax[1].axis('on')
+ax[1].set_title("Batch size x Accuracy (best number of epochs and learning rate fixed):")
+ax[1].set_xlabel("Batch size")
+ax[1].set_ylabel("Accuracy")
 
+ax[2].plot([x[2] for x in accuracy_hist[(arg_iter*4)+(arg_batch*2):(arg_iter*4)+(arg_batch*2)+2]],
+            [x[3] for x in accuracy_hist[(arg_iter*4)+(arg_batch*2):(arg_iter*4)+(arg_batch*2)+2]])
+ax[2].axis('on')
+ax[2].set_title("Learning rate x Accuracy (best number of epochs and batch size fixed):")
+ax[2].set_xlabel("Learning rate")
+ax[2].set_ylabel("Accuracy")
 plt.show()
 
 time_nn = (time.time() - start_time)
@@ -257,13 +286,17 @@ best_f1 = 0
 svm_best_clf = None
 opt_iter = -1
 opt_C = -1
+arg_iter = -1
+arg_C = -1
 accuracy_hist = []
 f1_score_hist = []
 
-start_time = time.time()
+#Fitting the model while selecting hyperparameters
+cont_i = 0
+cont_j = 0
 for i in np.linspace(500, 600, 2):
     for j in range(1, 3):
-        svm_clf = SVC(random_state=10, max_iter=i, tol=0.001,
+        svm_clf = SVC(random_state=10, max_iter=int(i), tol=0.001,
                     C=j, kernel='rbf', verbose=False,
                     decision_function_shape='ovr').fit(X_train_train, y_train_train)
 
@@ -275,13 +308,20 @@ for i in np.linspace(500, 600, 2):
         accuracy_hist.append((i, j, accuracy_val))
         f1_score_hist.append((i, j, f1_score_val))
 
-        if accuracy_val+0.001 > best_accuracy and f1_score_val+0.001 > best_f1:
+        if accuracy_val > best_accuracy and f1_score_val > best_f1:
             best_accuracy = accuracy_val
             best_f1 = f1_score_val
             svm_best_clf = svm_clf
 
             opt_iter = i
             opt_C = j
+
+            arg_iter = cont_i
+            arg_C = cont_j
+        
+        cont_j += 1
+    cont_j = 0
+    cont_i += 1
             
 print("Best parameters:")
 print("Number of iterations: {}".format(opt_iter))
@@ -291,19 +331,25 @@ print("F1 score in the training set: {}".format(best_f1))
 
 print("Confusion matrix:")
 fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-plot_confusion_matrix(logistic_clf, X_train_val, y_train_val, labels=np.unique(y_train_val), ax=ax)
+plot_confusion_matrix(svm_clf, X_train_val, y_train_val, labels=np.unique(y_train_val), ax=ax)
 plt.show()
 
-fig, ax = plt.subplots(1, 2, figsize=(10, 10))
-ax[0].plot([x[0] for x in accuracy_hist], [x for x in range(len(accuracy_hist))])
-ax[0].axis('off')
-ax[0].set_title("Accuracy x Number of iterations: ")
+fig, ax = plt.subplots(1, 2, figsize=(24, 12))
+ax[0].plot([x[0] for x in accuracy_hist[arg_C:arg_C+4:2]],
+            [x[2] for x in accuracy_hist[arg_C:arg_C+4:2]])
+ax[0].axis('on')
+ax[0].set_title("Number of iterations x Accuracy (best C fixed):")
+ax[0].set_xlabel("Number of iterations")
+ax[0].set_ylabel("Accuracy")
 
-ax[1].plot([x[1] for x in accuracy_hist], [x for x in range(len(accuracy_hist))])
-ax[1].axis('off')
-ax[1].set_title("Accuracy x C value: ")
-
+ax[1].plot([x[1] for x in accuracy_hist[arg_iter*2:(arg_iter*2)+2]],
+            [x[2] for x in accuracy_hist[arg_iter*2:(arg_iter*2)+2]])
+ax[1].axis('on')
+ax[1].set_title("C value x Accuracy (best number of iterations fixed):")
+ax[1].set_xlabel("C value")
+ax[1].set_ylabel("Accuracy")
 plt.show()
+
 time_svm = (time.time() - start_time)
 print("Execution time: {}".format(time_svm))
 
@@ -337,4 +383,18 @@ print("Neural network f1 score: {}".format(f1_score_neural_net))
 print("SVM accuracy: {}".format(accuracy_svm))
 print("SVM f1 score: {}".format(f1_score_svm))
 
-#Retraining model including validation set and computing E_out estimate on test set 
+#Retraining best model including validation set and computing E_out estimate on test set
+X_train = np.vstack((X_train, X_val))
+y_train = np.hstack((y_train, y_val))
+
+svm_final_clf = SVC(random_state=10, max_iter=500, tol=0.001,
+                    C=2, kernel='rbf', verbose=False,
+                    decision_function_shape='ovr').fit(X_train, y_train)
+
+final_predictions = svm_final_clf.predict(X_test)
+
+final_accuracy = svm_clf.score(X_test, y_test)
+final_f1_score = f1_score(y_true=y_test, y_pred=final_predictions, labels=np.unique(y_test), average='macro')
+
+print("Best model E_out estimate: {}".format(final_accuracy))
+print("Best model f1 socre: {}".format(final_f1_score))
